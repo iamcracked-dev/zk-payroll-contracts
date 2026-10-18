@@ -919,6 +919,17 @@ impl AuditModule {
             .get(&DataKey::AuditLogCounter(company_id.clone()))
             .unwrap_or(0);
 
+        // Keep the counter monotonic for stable pagination, while deleting the
+        // oldest retained record before the next append.
+        if counter >= MAX_AUDIT_LOG_ENTRIES {
+            env.storage()
+                .persistent()
+                .remove(&DataKey::AuditLog(
+                    company_id.clone(),
+                    counter - MAX_AUDIT_LOG_ENTRIES,
+                ));
+        }
+
         let entry = AuditLogEntry {
             auditor: auditor.clone(),
             company_id: company_id.clone(),
